@@ -1,0 +1,38 @@
+.capture-viewer {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #fff;
+  min-height: 320px;
+}
+
+.capture-viewer--empty,
+.capture-viewer--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 320px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.capture-viewer--error {
+  color: #991b1b;
+}
+
+.capture-viewer__header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.capture-viewer__url {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.capture-viewer__screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
