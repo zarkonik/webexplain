@@ -15,6 +15,21 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("{sessionId:guid}/inspect")]
+    public async Task<ActionResult<LiveCaptureInspectResponse>> Inspect(
+        Guid sessionId, LiveCaptureInspectRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var probe = await manager.InspectAsync(sessionId, request.XRatio, request.YRatio, cancellationToken);
+            return Ok(new LiveCaptureInspectResponse(probe.Selector, probe.IsFillable));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{sessionId:guid}/click")]
     public async Task<ActionResult<LiveCaptureStepResponse>> Click(
         Guid sessionId, LiveCaptureClickRequest request, CancellationToken cancellationToken)
@@ -22,6 +37,21 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
         try
         {
             var result = await manager.ClickAsync(sessionId, request.XRatio, request.YRatio, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{sessionId:guid}/fill")]
+    public async Task<ActionResult<LiveCaptureStepResponse>> Fill(
+        Guid sessionId, LiveCaptureFillRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await manager.FillAsync(sessionId, request.XRatio, request.YRatio, request.Value, cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -46,7 +76,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
         try
         {
             var steps = await manager.FinishAsync(sessionId, cancellationToken);
-            var dtos = steps.Select(s => new RecordedStepDto(s.Order, s.ActionType, s.Selector, s.Url)).ToList();
+            var dtos = steps.Select(s => new RecordedStepDto(s.Order, s.ActionType, s.Selector, s.Value, s.ElementDescription, s.Url)).ToList();
             return Ok(dtos);
         }
         catch (InvalidOperationException ex)

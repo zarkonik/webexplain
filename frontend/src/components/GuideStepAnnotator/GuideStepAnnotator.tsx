@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createGuide } from '../../api/guideApi';
 import { getLiveScreenshotUrl } from '../../api/liveCaptureApi';
+import BrowserFrame from '../BrowserFrame/BrowserFrame';
 import type { RecordedStepDto } from '../../types/liveCapture';
 import type { GuideDto } from '../../types/guide';
 import './GuideStepAnnotator.css';
@@ -20,7 +21,7 @@ function GuideStepAnnotator({ sessionId, sourceUrl, steps, onSaved, onCancel }: 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const actionableSteps = steps.filter((step) => step.selector);
+  const actionableSteps = steps;
 
   async function handleSave() {
     if (!title.trim()) {
@@ -36,11 +37,15 @@ function GuideStepAnnotator({ sessionId, sourceUrl, steps, onSaved, onCancel }: 
         title: title.trim(),
         description: description.trim(),
         sourceUrl,
-        steps: actionableSteps.map((step, index) => ({
-          order: index + 1,
-          targetSelector: step.selector!,
+        sourceCaptureSessionId: sessionId,
+        steps: actionableSteps.map((step) => ({
+          order: step.order,
+          targetSelector: step.selector ?? step.url,
           instruction: instructions[step.order] ?? '',
           actionType: step.actionType,
+          inputValue: step.value,
+          pageUrl: step.url,
+          elementDescription: step.elementDescription,
         })),
       });
       onSaved(guide);
@@ -73,20 +78,31 @@ function GuideStepAnnotator({ sessionId, sourceUrl, steps, onSaved, onCancel }: 
       <ul className="guide-step-annotator__list">
         {actionableSteps.map((step) => (
           <li key={step.order} className="guide-step-annotator__row">
-            <img
-              className="guide-step-annotator__thumbnail"
-              src={getLiveScreenshotUrl(sessionId, step.order)}
-              alt={`Step ${step.order}`}
-            />
+            <BrowserFrame url={step.url}>
+              <img
+                className="guide-step-annotator__screenshot"
+                src={getLiveScreenshotUrl(sessionId, step.order)}
+                alt={`Step ${step.order}`}
+              />
+            </BrowserFrame>
             <div className="guide-step-annotator__fields">
-              <span className="guide-step-annotator__selector">{step.selector}</span>
+              <p className="guide-step-annotator__description">
+                {step.elementDescription ?? 'No description available for this step.'}
+              </p>
               <input
                 type="text"
                 className="guide-step-annotator__instruction-input"
-                placeholder="What should the user do here?"
+                placeholder="Additional explanation (optional)"
                 value={instructions[step.order] ?? ''}
                 onChange={(e) => setInstructions((prev) => ({ ...prev, [step.order]: e.target.value }))}
               />
+              <details className="guide-step-annotator__technical">
+                <summary>Technical details</summary>
+                <span className="guide-step-annotator__selector">
+                  {step.actionType === 'navigate' ? 'Opens page: ' : `${step.actionType} on: `}
+                  {step.selector ?? step.url}
+                </span>
+              </details>
             </div>
           </li>
         ))}

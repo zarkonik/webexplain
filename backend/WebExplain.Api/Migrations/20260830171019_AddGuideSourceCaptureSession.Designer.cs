@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebExplain.Api.Data;
@@ -11,9 +12,11 @@ using WebExplain.Api.Data;
 namespace WebExplain.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830171019_AddGuideSourceCaptureSession")]
+    partial class AddGuideSourceCaptureSession
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -130,9 +133,6 @@ namespace WebExplain.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ElementDescription")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("GuideId")
                         .HasColumnType("uuid");
 
@@ -145,9 +145,6 @@ namespace WebExplain.Api.Migrations
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
-
-                    b.Property<string>("PageUrl")
-                        .HasColumnType("text");
 
                     b.Property<string>("TargetSelector")
                         .IsRequired()

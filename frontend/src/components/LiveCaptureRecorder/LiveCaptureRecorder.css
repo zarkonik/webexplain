@@ -81,6 +81,46 @@
   color: #4f46e5;
 }
 
+.live-capture-recorder__fill-prompt {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+}
+
+.live-capture-recorder__fill-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  outline: none;
+}
+
+.live-capture-recorder__fill-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.live-capture-recorder__skip-button {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+  background-color: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.live-capture-recorder__skip-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .live-capture-recorder__footer {
   display: flex;
   align-items: center;
@@ -112,6 +152,11 @@
   }
 
   .live-capture-recorder__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-capture-recorder__fill-prompt {
     flex-direction: column;
     align-items: stretch;
   }

@@ -39,39 +39,60 @@
 
 .guide-step-annotator__row {
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.6rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background-color: #fff;
 }
 
-.guide-step-annotator__thumbnail {
-  flex-shrink: 0;
-  width: 96px;
-  height: 64px;
-  object-fit: cover;
+.guide-step-annotator__screenshot {
+  display: block;
+  width: 100%;
+  max-height: 500px;
+  object-fit: contain;
   object-position: top;
-  border-radius: 4px;
+  background-color: #f9fafb;
   border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 
 .guide-step-annotator__fields {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   min-width: 0;
 }
 
+.guide-step-annotator__description {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.guide-step-annotator__technical {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.guide-step-annotator__technical summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.guide-step-annotator__technical summary:hover {
+  color: #6b7280;
+}
+
 .guide-step-annotator__selector {
+  display: block;
+  margin-top: 0.35rem;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.75rem;
   color: #6b7280;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 .guide-step-annotator__instruction-input {
@@ -121,13 +142,7 @@
 }
 
 @media (max-width: 560px) {
-  .guide-step-annotator__row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .guide-step-annotator__thumbnail {
-    width: 100%;
-    height: 120px;
+  .guide-step-annotator__screenshot {
+    max-height: 320px;
   }
 }

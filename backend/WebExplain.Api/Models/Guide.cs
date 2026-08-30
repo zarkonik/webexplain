@@ -6,6 +6,7 @@ public class Guide
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string SourceUrl { get; set; } = string.Empty;
+    public Guid? SourceCaptureSessionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

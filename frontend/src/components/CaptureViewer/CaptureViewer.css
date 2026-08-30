@@ -1,9 +1,7 @@
 .capture-viewer {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  background-color: #fff;
-  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .capture-viewer--empty,
@@ -14,21 +12,13 @@
   height: 320px;
   color: #6b7280;
   font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #fff;
 }
 
 .capture-viewer--error {
   color: #991b1b;
-}
-
-.capture-viewer__header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-}
-
-.capture-viewer__url {
-  font-size: 0.85rem;
-  color: #4b5563;
 }
 
 .capture-viewer__screenshot {

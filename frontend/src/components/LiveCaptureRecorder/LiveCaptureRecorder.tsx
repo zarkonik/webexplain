@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
-import { clickLiveCapture, finishLiveCapture, getLiveScreenshotUrl, startLiveCapture } from '../../api/liveCaptureApi';
+import {
+  clickLiveCapture,
+  fillLiveCapture,
+  finishLiveCapture,
+  getLiveScreenshotUrl,
+  inspectLiveCapture,
+  startLiveCapture,
+} from '../../api/liveCaptureApi';
+import BrowserFrame from '../BrowserFrame/BrowserFrame';
 import GuideStepAnnotator from '../GuideStepAnnotator/GuideStepAnnotator';
 import type { RecordedStepDto } from '../../types/liveCapture';
 import type { GuideDto } from '../../types/guide';
@@ -8,7 +16,16 @@ import './LiveCaptureRecorder.css';
 
 type Phase = 'idle' | 'recording' | 'reviewing' | 'saved';
 
-function LiveCaptureRecorder() {
+interface PendingFill {
+  xRatio: number;
+  yRatio: number;
+}
+
+interface LiveCaptureRecorderProps {
+  onGuideSaved?: (guide: GuideDto) => void;
+}
+
+function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [url, setUrl] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -17,6 +34,8 @@ function LiveCaptureRecorder() {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedGuide, setSavedGuide] = useState<GuideDto | null>(null);
+  const [pendingFill, setPendingFill] = useState<PendingFill | null>(null);
+  const [fillValue, setFillValue] = useState('');
 
   async function handleStart() {
     if (!url.trim()) return;
@@ -28,7 +47,16 @@ function LiveCaptureRecorder() {
       const result = await startLiveCapture(url.trim());
       setSessionId(result.sessionId);
       setCurrentOrder(result.order);
-      setLog([{ order: result.order, actionType: 'navigate', selector: null, url: result.url }]);
+      setLog([
+        {
+          order: result.order,
+          actionType: 'navigate',
+          selector: null,
+          value: null,
+          elementDescription: 'Open the starting page.',
+          url: result.url,
+        },
+      ]);
       setPhase('recording');
     } catch {
       setError('Could not open that page. Check the URL and try again.');
@@ -48,11 +76,54 @@ function LiveCaptureRecorder() {
     setError(null);
 
     try {
+      const probe = await inspectLiveCapture(sessionId, xRatio, yRatio);
+      if (probe.isFillable) {
+        setPendingFill({ xRatio, yRatio });
+        setFillValue('');
+        return;
+      }
+
       const step = await clickLiveCapture(sessionId, xRatio, yRatio);
       setCurrentOrder(step.order);
       setLog((prev) => [...prev, step]);
     } catch {
-      setError('That click could not be recorded. The page may still be loading — try again.');
+      setError('That action could not be recorded. The page may still be loading — try again.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleFillSubmit() {
+    if (!sessionId || !pendingFill) return;
+
+    setIsBusy(true);
+    setError(null);
+
+    try {
+      const step = await fillLiveCapture(sessionId, pendingFill.xRatio, pendingFill.yRatio, fillValue);
+      setCurrentOrder(step.order);
+      setLog((prev) => [...prev, step]);
+      setPendingFill(null);
+    } catch {
+      setError('That value could not be entered. Please try again.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleFillSkip() {
+    if (!sessionId || !pendingFill) return;
+
+    setIsBusy(true);
+    setError(null);
+
+    try {
+      const step = await clickLiveCapture(sessionId, pendingFill.xRatio, pendingFill.yRatio);
+      setCurrentOrder(step.order);
+      setLog((prev) => [...prev, step]);
+      setPendingFill(null);
+    } catch {
+      setError('That click could not be recorded. Please try again.');
     } finally {
       setIsBusy(false);
     }
@@ -83,6 +154,8 @@ function LiveCaptureRecorder() {
     setLog([]);
     setError(null);
     setSavedGuide(null);
+    setPendingFill(null);
+    setFillValue('');
   }
 
   if (phase === 'idle') {
@@ -106,20 +179,57 @@ function LiveCaptureRecorder() {
   }
 
   if (phase === 'recording' && sessionId) {
+    const currentUrl = log[log.length - 1]?.url ?? url;
+
     return (
       <div className="live-capture-recorder">
         <p className="live-capture-recorder__hint">
           Click anywhere on the page below to record that step. When you're done, click "Finish".
         </p>
-        <div className="live-capture-recorder__stage">
-          <img
-            className="live-capture-recorder__screenshot"
-            src={getLiveScreenshotUrl(sessionId, currentOrder)}
-            alt="Live page preview"
-            onClick={handleImageClick}
-          />
-          {isBusy && <div className="live-capture-recorder__overlay">Working…</div>}
-        </div>
+        <BrowserFrame url={currentUrl}>
+          <div className="live-capture-recorder__stage">
+            <img
+              className="live-capture-recorder__screenshot"
+              src={getLiveScreenshotUrl(sessionId, currentOrder)}
+              alt="Live page preview"
+              onClick={handleImageClick}
+            />
+            {isBusy && <div className="live-capture-recorder__overlay">Working…</div>}
+          </div>
+        </BrowserFrame>
+
+        {pendingFill && (
+          <div className="live-capture-recorder__fill-prompt">
+            <input
+              type="text"
+              className="live-capture-recorder__fill-input"
+              placeholder="What should be typed here?"
+              value={fillValue}
+              onChange={(e) => setFillValue(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleFillSubmit();
+              }}
+            />
+            <button
+              type="button"
+              className="live-capture-recorder__button"
+              onClick={handleFillSubmit}
+              disabled={isBusy || !fillValue.trim()}
+            >
+              Type &amp; continue
+            </button>
+            <button
+              type="button"
+              className="live-capture-recorder__skip-button"
+              onClick={handleFillSkip}
+              disabled={isBusy}
+            >
+              Just click
+            </button>
+          </div>
+        )}
+
         {error && <p className="live-capture-recorder__error">{error}</p>}
         <div className="live-capture-recorder__footer">
           <span className="live-capture-recorder__step-count">{log.length} step(s) recorded</span>
@@ -141,6 +251,7 @@ function LiveCaptureRecorder() {
           onSaved={(guide) => {
             setSavedGuide(guide);
             setPhase('saved');
+            onGuideSaved?.(guide);
           }}
           onCancel={handleReset}
         />

@@ -2,7 +2,24 @@ using Microsoft.Playwright;
 
 namespace WebExplain.Api.Services.LiveCapture;
 
-public record RecordedStep(int Order, string ActionType, string? Selector, string Url, string HtmlFilePath, string ScreenshotFilePath);
+public record RecordedStep(
+    int Order,
+    string ActionType,
+    string? Selector,
+    string? Value,
+    string? ElementDescription,
+    string Url,
+    string HtmlFilePath,
+    string ScreenshotFilePath);
+
+public class ElementProbe
+{
+    public string? Selector { get; set; }
+    public bool IsFillable { get; set; }
+    public bool IsSensitive { get; set; }
+    public string? Tag { get; set; }
+    public string? Label { get; set; }
+}
 
 public class LiveSession(
     IPlaywright playwright,
@@ -25,4 +42,11 @@ public class LiveSession(
     public List<RecordedStep> Steps { get; } = [];
     public DateTime LastActivity { get; set; } = DateTime.UtcNow;
     public bool IsFinished { get; set; }
+
+    /// <summary>
+    /// Real (unmasked) values typed into sensitive fields, held only long enough to redact
+    /// them from the recorded HAR file once the session ends. Never persisted or returned
+    /// to the client - cleared immediately after redaction.
+    /// </summary>
+    public List<string> SensitiveValues { get; } = [];
 }

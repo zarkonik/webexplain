@@ -3,6 +3,9 @@ bin/
 obj/
 *.user
 
+# Captured screenshots/HTML/HAR (runtime artifacts, may contain cookies/auth data)
+backend/WebExplain.Api/Storage/
+
 # Node / frontend
 node_modules/
 dist/

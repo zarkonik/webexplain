@@ -11,4 +11,6 @@ public class GuideStep
     public string Instruction { get; set; } = string.Empty;
     public string ActionType { get; set; } = "click"; // click, fill, navigate, highlight
     public string? InputValue { get; set; }
+    public string? PageUrl { get; set; }
+    public string? ElementDescription { get; set; }
 }

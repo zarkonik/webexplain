@@ -1,0 +1,175 @@
+.guide-detail {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #fff;
+  padding: 1.25rem;
+  min-height: 320px;
+}
+
+.guide-detail--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 320px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.guide-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.guide-detail__title {
+  margin: 0 0 0.2rem;
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.guide-detail__url {
+  font-size: 0.85rem;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.guide-detail__url:hover {
+  text-decoration: underline;
+}
+
+.guide-detail__delete {
+  flex-shrink: 0;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  color: #991b1b;
+  background-color: #fee2e2;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.guide-detail__delete:hover {
+  background-color: #fecaca;
+}
+
+.guide-detail__description {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.guide-detail__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.guide-detail__step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.guide-detail__step:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.guide-detail__step-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.guide-detail__step-badge {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4f46e5;
+  background-color: #eef2ff;
+  border-radius: 999px;
+}
+
+.guide-detail__step-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.1rem;
+}
+
+.guide-detail__step-instruction {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.guide-detail__step-action-description {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.guide-detail__step-screenshot {
+  display: block;
+  width: 100%;
+  max-height: 600px;
+  object-fit: contain;
+  object-position: top;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.guide-detail__step-screenshot--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.guide-detail__step-technical {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.guide-detail__step-technical summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.guide-detail__step-technical summary:hover {
+  color: #6b7280;
+}
+
+.guide-detail__step-meta {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #6b7280;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 560px) {
+  .guide-detail__header {
+    flex-direction: column;
+  }
+
+  .guide-detail__step-screenshot {
+    max-height: 400px;
+  }
+}

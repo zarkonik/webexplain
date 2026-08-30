@@ -6,7 +6,9 @@ public record GuideStepDto(
     string TargetSelector,
     string Instruction,
     string ActionType,
-    string? InputValue
+    string? InputValue,
+    string? PageUrl,
+    string? ElementDescription
 );
 
 public record GuideDto(
@@ -14,6 +16,7 @@ public record GuideDto(
     string Title,
     string Description,
     string SourceUrl,
+    Guid? SourceCaptureSessionId,
     DateTime CreatedAt,
     List<GuideStepDto> Steps
 );
@@ -23,12 +26,15 @@ public record CreateGuideStepRequest(
     string TargetSelector,
     string Instruction,
     string ActionType,
-    string? InputValue
+    string? InputValue,
+    string? PageUrl,
+    string? ElementDescription
 );
 
 public record CreateGuideRequest(
     string Title,
     string Description,
     string SourceUrl,
+    Guid? SourceCaptureSessionId,
     List<CreateGuideStepRequest> Steps
 );

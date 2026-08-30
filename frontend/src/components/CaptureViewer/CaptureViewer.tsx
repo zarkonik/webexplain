@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getScreenshotUrl } from '../../api/captureApi';
+import BrowserFrame from '../BrowserFrame/BrowserFrame';
 import CaptureFilmstrip from '../CaptureFilmstrip/CaptureFilmstrip';
 import type { CaptureSessionDto } from '../../types/capture';
 import { CaptureStatus } from '../../types/capture';
@@ -44,15 +45,14 @@ function CaptureViewer({ session }: CaptureViewerProps) {
 
   return (
     <div className="capture-viewer">
-      <div className="capture-viewer__header">
-        <span className="capture-viewer__url">{selectedPage?.url ?? session.sourceUrl}</span>
-      </div>
       {selectedPage && (
-        <img
-          className="capture-viewer__screenshot"
-          src={getScreenshotUrl(session.id, selectedPage.order)}
-          alt={`Screenshot of ${selectedPage.url}`}
-        />
+        <BrowserFrame url={selectedPage.url ?? session.sourceUrl}>
+          <img
+            className="capture-viewer__screenshot"
+            src={getScreenshotUrl(session.id, selectedPage.order)}
+            alt={`Screenshot of ${selectedPage.url}`}
+          />
+        </BrowserFrame>
       )}
       <CaptureFilmstrip
         sessionId={session.id}

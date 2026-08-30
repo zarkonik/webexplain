@@ -6,6 +6,12 @@ public record StartLiveCaptureResponse(Guid SessionId, int Order, string Url, in
 
 public record LiveCaptureClickRequest(double XRatio, double YRatio);
 
-public record LiveCaptureStepResponse(int Order, string ActionType, string? Selector, string Url);
+public record LiveCaptureInspectRequest(double XRatio, double YRatio);
 
-public record RecordedStepDto(int Order, string ActionType, string? Selector, string Url);
+public record LiveCaptureInspectResponse(string? Selector, bool IsFillable);
+
+public record LiveCaptureFillRequest(double XRatio, double YRatio, string Value);
+
+public record LiveCaptureStepResponse(int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url);
+
+public record RecordedStepDto(int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url);
