@@ -18,6 +18,32 @@
   color: #6b7280;
 }
 
+.home__mode-switch {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.home__mode-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4b5563;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.home__mode-button:hover {
+  border-color: #c7d2fe;
+}
+
+.home__mode-button--active {
+  color: #4f46e5;
+  background-color: #eef2ff;
+  border-color: #4f46e5;
+}
+
 .home__content {
   display: grid;
   grid-template-columns: 280px 1fr;

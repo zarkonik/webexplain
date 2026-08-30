@@ -3,6 +3,7 @@ using WebExplain.Api.Data;
 using WebExplain.Api.Repositories;
 using WebExplain.Api.Services;
 using WebExplain.Api.Services.Capture;
+using WebExplain.Api.Services.LiveCapture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddScoped<IGuideService, GuideService>();
 builder.Services.AddScoped<ICaptureSessionRepository, CaptureSessionRepository>();
 builder.Services.AddScoped<ICaptureService, CaptureService>();
 builder.Services.AddSingleton<IBrowserCaptureEngine, PlaywrightCaptureEngine>();
+
+builder.Services.AddSingleton<ILiveCaptureManager, LiveCaptureManager>();
+builder.Services.AddHostedService<LiveCaptureCleanupService>();
 
 builder.Services.AddCors(options =>
 {

@@ -1,0 +1,118 @@
+.live-capture-recorder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.live-capture-recorder__start-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.live-capture-recorder__input {
+  flex: 1;
+  padding: 0.6rem 0.9rem;
+  font-size: 1rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  outline: none;
+}
+
+.live-capture-recorder__input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.live-capture-recorder__button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #4f46e5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.live-capture-recorder__button:hover:not(:disabled) {
+  background-color: #4338ca;
+}
+
+.live-capture-recorder__button:disabled {
+  background-color: #a5a6f6;
+  cursor: not-allowed;
+}
+
+.live-capture-recorder__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.live-capture-recorder__stage {
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.live-capture-recorder__screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+
+.live-capture-recorder__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.live-capture-recorder__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.live-capture-recorder__step-count {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.live-capture-recorder__error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.live-capture-recorder__success {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #065f46;
+}
+
+@media (max-width: 560px) {
+  .live-capture-recorder__start-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-capture-recorder__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -38,17 +38,25 @@ public class CaptureService(
 
         try
         {
-            var result = await captureEngine.CaptureAsync(request.Url, session.StorageFolder, cancellationToken);
+            var steps = (request.Steps ?? [])
+                .Select(s => new CaptureStepAction(s.ActionType, s.Selector, s.Value))
+                .ToList();
 
-            await repository.AddPageAsync(new CapturedPage
+            var results = await captureEngine.CaptureAsync(request.Url, steps, session.StorageFolder, cancellationToken);
+
+            for (var i = 0; i < results.Count; i++)
             {
-                Id = Guid.NewGuid(),
-                CaptureSessionId = session.Id,
-                Order = 1,
-                Url = result.Url,
-                HtmlFilePath = result.HtmlFilePath,
-                ScreenshotFilePath = result.ScreenshotFilePath
-            });
+                var result = results[i];
+                await repository.AddPageAsync(new CapturedPage
+                {
+                    Id = Guid.NewGuid(),
+                    CaptureSessionId = session.Id,
+                    Order = i + 1,
+                    Url = result.Url,
+                    HtmlFilePath = result.HtmlFilePath,
+                    ScreenshotFilePath = result.ScreenshotFilePath
+                });
+            }
 
             session.Status = CaptureStatus.Completed;
             session.CompletedAt = DateTime.UtcNow;

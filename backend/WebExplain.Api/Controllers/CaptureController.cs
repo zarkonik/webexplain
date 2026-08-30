@@ -29,10 +29,13 @@ public class CaptureController(ICaptureService captureService) : ControllerBase
     }
 
     [HttpGet("{id:guid}/screenshot")]
-    public async Task<IActionResult> GetScreenshot(Guid id)
+    public Task<IActionResult> GetScreenshot(Guid id) => GetScreenshot(id, 1);
+
+    [HttpGet("{id:guid}/screenshot/{order:int}")]
+    public async Task<IActionResult> GetScreenshot(Guid id, int order)
     {
         var session = await captureService.GetSessionByIdAsync(id);
-        var page = session?.Pages.FirstOrDefault();
+        var page = session?.Pages.FirstOrDefault(p => p.Order == order);
         if (page is null || !System.IO.File.Exists(page.ScreenshotFilePath))
             return NotFound();
 
@@ -40,10 +43,13 @@ public class CaptureController(ICaptureService captureService) : ControllerBase
     }
 
     [HttpGet("{id:guid}/html")]
-    public async Task<IActionResult> GetHtml(Guid id)
+    public Task<IActionResult> GetHtml(Guid id) => GetHtml(id, 1);
+
+    [HttpGet("{id:guid}/html/{order:int}")]
+    public async Task<IActionResult> GetHtml(Guid id, int order)
     {
         var session = await captureService.GetSessionByIdAsync(id);
-        var page = session?.Pages.FirstOrDefault();
+        var page = session?.Pages.FirstOrDefault(p => p.Order == order);
         if (page is null || !System.IO.File.Exists(page.HtmlFilePath))
             return NotFound();
 

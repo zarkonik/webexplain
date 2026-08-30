@@ -2,7 +2,9 @@ using WebExplain.Api.Models;
 
 namespace WebExplain.Api.DTOs;
 
-public record CreateCaptureRequest(string Url);
+public record CaptureActionRequest(string ActionType, string? Selector, string? Value);
+
+public record CreateCaptureRequest(string Url, List<CaptureActionRequest>? Steps = null);
 
 public record CapturedPageDto(
     Guid Id,

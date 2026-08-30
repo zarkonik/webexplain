@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { getScreenshotUrl } from '../../api/captureApi';
+import CaptureFilmstrip from '../CaptureFilmstrip/CaptureFilmstrip';
 import type { CaptureSessionDto } from '../../types/capture';
 import { CaptureStatus } from '../../types/capture';
 import './CaptureViewer.css';
@@ -8,6 +10,12 @@ interface CaptureViewerProps {
 }
 
 function CaptureViewer({ session }: CaptureViewerProps) {
+  const [selectedOrder, setSelectedOrder] = useState(1);
+
+  useEffect(() => {
+    setSelectedOrder(1);
+  }, [session?.id]);
+
   if (!session) {
     return (
       <div className="capture-viewer capture-viewer--empty">
@@ -32,15 +40,25 @@ function CaptureViewer({ session }: CaptureViewerProps) {
     );
   }
 
+  const selectedPage = session.pages.find((p) => p.order === selectedOrder) ?? session.pages[0];
+
   return (
     <div className="capture-viewer">
       <div className="capture-viewer__header">
-        <span className="capture-viewer__url">{session.sourceUrl}</span>
+        <span className="capture-viewer__url">{selectedPage?.url ?? session.sourceUrl}</span>
       </div>
-      <img
-        className="capture-viewer__screenshot"
-        src={getScreenshotUrl(session.id)}
-        alt={`Screenshot of ${session.sourceUrl}`}
+      {selectedPage && (
+        <img
+          className="capture-viewer__screenshot"
+          src={getScreenshotUrl(session.id, selectedPage.order)}
+          alt={`Screenshot of ${selectedPage.url}`}
+        />
+      )}
+      <CaptureFilmstrip
+        sessionId={session.id}
+        pages={session.pages}
+        selectedOrder={selectedOrder}
+        onSelect={setSelectedOrder}
       />
     </div>
   );

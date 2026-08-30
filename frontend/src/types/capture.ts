@@ -1,8 +1,18 @@
-export enum CaptureStatus {
-  Pending = 0,
-  Running = 1,
-  Completed = 2,
-  Failed = 3,
+export const CaptureStatus = {
+  Pending: 0,
+  Running: 1,
+  Completed: 2,
+  Failed: 3,
+} as const;
+
+export type CaptureStatus = (typeof CaptureStatus)[keyof typeof CaptureStatus];
+
+export type CaptureActionType = 'click' | 'fill' | 'navigate';
+
+export interface CaptureStepInput {
+  actionType: CaptureActionType;
+  selector?: string;
+  value?: string;
 }
 
 export interface CapturedPageDto {
