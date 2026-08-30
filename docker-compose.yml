@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: webexplain-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: webexplain
+      POSTGRES_USER: webexplain
+      POSTGRES_PASSWORD: webexplain_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - webexplain_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  webexplain_postgres_data:
