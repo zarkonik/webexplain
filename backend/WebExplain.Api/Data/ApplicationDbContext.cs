@@ -7,6 +7,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Guide> Guides => Set<Guide>();
     public DbSet<GuideStep> GuideSteps => Set<GuideStep>();
+    public DbSet<CaptureSession> CaptureSessions => Set<CaptureSession>();
+    public DbSet<CapturedPage> CapturedPages => Set<CapturedPage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +25,22 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.HasKey(s => s.Id);
             entity.HasIndex(s => new { s.GuideId, s.Order });
+        });
+
+        modelBuilder.Entity<CaptureSession>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Status).HasConversion<string>();
+            entity.HasMany(c => c.Pages)
+                .WithOne(p => p.CaptureSession)
+                .HasForeignKey(p => p.CaptureSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CapturedPage>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.HasIndex(p => new { p.CaptureSessionId, p.Order });
         });
     }
 }

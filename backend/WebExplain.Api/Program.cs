@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WebExplain.Api.Data;
 using WebExplain.Api.Repositories;
 using WebExplain.Api.Services;
+using WebExplain.Api.Services.Capture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IGuideService, GuideService>();
+
+builder.Services.AddScoped<ICaptureSessionRepository, CaptureSessionRepository>();
+builder.Services.AddScoped<ICaptureService, CaptureService>();
+builder.Services.AddSingleton<IBrowserCaptureEngine, PlaywrightCaptureEngine>();
 
 builder.Services.AddCors(options =>
 {
