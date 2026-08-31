@@ -18,7 +18,8 @@ public record LiveCaptureScrollResponse(int Order);
 
 public record LiveCaptureStepResponse(
     int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url,
-    double? TargetX = null, double? TargetY = null, double? TargetWidth = null, double? TargetHeight = null);
+    double? TargetX = null, double? TargetY = null, double? TargetWidth = null, double? TargetHeight = null,
+    bool IsPopup = false);
 
 public record RecordedStepDto(
     int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url,

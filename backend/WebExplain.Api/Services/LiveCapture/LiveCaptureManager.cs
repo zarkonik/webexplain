@@ -24,7 +24,8 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     [
         "--disable-background-timer-throttling",
         "--disable-backgrounding-occluded-windows",
-        "--disable-renderer-backgrounding"
+        "--disable-renderer-backgrounding",
+        "--disable-popup-blocking"
     ];
 
     private const string ProbeScript = """
@@ -99,6 +100,25 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         }
         """;
 
+    private const string StealthInitScript = """
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+
+        if (!window.chrome) {
+            window.chrome = { runtime: {} };
+        }
+
+        if (window.navigator.permissions && window.navigator.permissions.query) {
+            const originalQuery = window.navigator.permissions.query.bind(window.navigator.permissions);
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications'
+                    ? Promise.resolve({ state: Notification.permission })
+                    : originalQuery(parameters)
+            );
+        }
+        """;
+
     public async Task<StartLiveCaptureResponse> StartAsync(string url, CancellationToken cancellationToken = default)
     {
         var sessionId = Guid.NewGuid();
@@ -119,8 +139,15 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         {
             ViewportSize = new ViewportSize { Width = viewportWidth, Height = viewportHeight },
             RecordHarPath = Path.Combine(storageFolder, "network.har"),
-            RecordHarContent = HarContentPolicy.Embed
+            RecordHarContent = HarContentPolicy.Embed,
+            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         });
+
+        // Payment/fraud-detection flows (PayPal sandbox included) can detect the tell-tale
+        // signs of an automated/headless browser and deliberately stall instead of failing
+        // outright - which looks exactly like a stuck "in progress" spinner from the outside.
+        // This patches the most common automation fingerprints before any page script runs.
+        await context.AddInitScriptAsync(StealthInitScript);
 
         var page = await context.NewPageAsync();
         await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
@@ -136,10 +163,11 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     public async Task<ElementProbe> InspectAsync(Guid sessionId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
     {
         var session = GetActiveSession(sessionId);
-        var x = xRatio * session.ViewportWidth;
-        var y = yRatio * session.ViewportHeight;
+        var (viewportWidth, viewportHeight) = GetActiveViewportSize(session);
+        var x = xRatio * viewportWidth;
+        var y = yRatio * viewportHeight;
 
-        return await session.Page.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
+        return await session.ActivePage.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
     }
 
     public async Task<LiveCaptureStepResponse> ClickAsync(Guid sessionId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
@@ -147,19 +175,22 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var session = GetActiveSession(sessionId);
         session.LastActivity = DateTime.UtcNow;
 
-        var x = xRatio * session.ViewportWidth;
-        var y = yRatio * session.ViewportHeight;
+        var activePage = session.ActivePage;
+        var (viewportWidth, viewportHeight) = GetActiveViewportSize(session);
+        var x = xRatio * viewportWidth;
+        var y = yRatio * viewportHeight;
 
-        var probe = await session.Page.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
+        var probe = await activePage.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
 
-        await ClickAndAwaitAnyPopupAsync(session, x, y);
-        await SettlePageAsync(session.Page);
+        await ClickAndAttachAnyPopupAsync(session, activePage, x, y);
+        await SettlePageAsync(session.ActivePage);
 
         var description = BuildElementDescription("click", probe, null);
         var step = await CaptureStepAsync(session, "click", probe.Selector, null, description, cancellationToken, probe);
         return new LiveCaptureStepResponse(
             step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url,
-            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight);
+            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight,
+            IsPopup: session.Popup is { IsClosed: false });
     }
 
     public async Task<LiveCaptureStepResponse> FillAsync(
@@ -168,16 +199,18 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var session = GetActiveSession(sessionId);
         session.LastActivity = DateTime.UtcNow;
 
-        var x = xRatio * session.ViewportWidth;
-        var y = yRatio * session.ViewportHeight;
+        var activePage = session.ActivePage;
+        var (viewportWidth, viewportHeight) = GetActiveViewportSize(session);
+        var x = xRatio * viewportWidth;
+        var y = yRatio * viewportHeight;
 
-        var probe = await session.Page.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
+        var probe = await activePage.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
 
-        await session.Page.Mouse.ClickAsync((float)x, (float)y);
-        await session.Page.Keyboard.PressAsync("Control+A");
-        await session.Page.Keyboard.PressAsync("Delete");
-        await session.Page.Keyboard.TypeAsync(value);
-        await SettlePageAsync(session.Page);
+        await activePage.Mouse.ClickAsync((float)x, (float)y);
+        await activePage.Keyboard.PressAsync("Control+A");
+        await activePage.Keyboard.PressAsync("Delete");
+        await activePage.Keyboard.TypeAsync(value);
+        await SettlePageAsync(session.ActivePage);
 
         // The real value is only ever used to type into the page above - everything
         // recorded, returned, or persisted from here on uses the masked form for
@@ -193,7 +226,8 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var step = await CaptureStepAsync(session, "fill", probe.Selector, recordedValue, description, cancellationToken, probe);
         return new LiveCaptureStepResponse(
             step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url,
-            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight);
+            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight,
+            IsPopup: session.Popup is { IsClosed: false });
     }
 
     public async Task<int> ScrollAsync(Guid sessionId, double deltaY, CancellationToken cancellationToken = default)
@@ -201,8 +235,9 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var session = GetActiveSession(sessionId);
         session.LastActivity = DateTime.UtcNow;
 
-        await session.Page.Mouse.WheelAsync(0, (float)deltaY);
-        await SettlePageAsync(session.Page);
+        var activePage = session.ActivePage;
+        await activePage.Mouse.WheelAsync(0, (float)deltaY);
+        await SettlePageAsync(activePage);
 
         // Scrolling isn't a recordable action on its own - it just changes what the
         // current step looks like, so the latest step's screenshot/HTML are refreshed
@@ -213,11 +248,11 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
             return 0;
         }
 
-        var html = await WithNavigationRetryAsync(() => session.Page.ContentAsync());
+        var html = await WithNavigationRetryAsync(() => activePage.ContentAsync());
         await File.WriteAllTextAsync(latestStep.HtmlFilePath, html, cancellationToken);
         await WithNavigationRetryAsync(async () =>
         {
-            await session.Page.ScreenshotAsync(new PageScreenshotOptions { Path = latestStep.ScreenshotFilePath });
+            await activePage.ScreenshotAsync(new PageScreenshotOptions { Path = latestStep.ScreenshotFilePath });
             return true;
         });
 
@@ -394,46 +429,66 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
 
     /// <summary>
     /// Some flows (payment/OAuth-style "test mode" dialogs in particular) open a popup window
-    /// and have the main page wait for that popup to finish before its own "in progress" state
-    /// clears - a wait that never ends if nothing is watching the popup at all. This performs
-    /// the click, and if a popup appears, gives it a chance to run its course and close on its
-    /// own before the caller settles the main page. A popup that instead needs its own manual
-    /// interaction (e.g. a real login form) isn't handled here - it will simply time out.
+    /// that needs its own clicks/typing to complete - waiting for it to close on its own never
+    /// finishes if nothing ever interacts with it. This performs the click and, if a popup
+    /// opens, attaches it to the session as the new <see cref="LiveSession.ActivePage"/>: every
+    /// screenshot, click, fill and scroll from this point targets the popup instead of the main
+    /// page, until the popup closes itself, at which point control reverts to the main page
+    /// automatically (see <see cref="LiveSession.ActivePage"/>).
     /// </summary>
-    private static async Task ClickAndAwaitAnyPopupAsync(LiveSession session, double x, double y)
+    private static async Task ClickAndAttachAnyPopupAsync(LiveSession session, IPage page, double x, double y)
     {
         IPage? popup = null;
-        void OnPopup(object? sender, IPage page) => popup = page;
+        void OnPopup(object? sender, IPage p) => popup = p;
 
         session.Context.Page += OnPopup;
         try
         {
-            await session.Page.Mouse.ClickAsync((float)x, (float)y);
-            await Task.Delay(300); // give a popup, if one is coming, time to actually open
+            await page.Mouse.ClickAsync((float)x, (float)y);
+            // Give a popup, if one is coming, time to actually open - some apps do async work
+            // (e.g. fetching a payment session) before calling window.open(), so this needs to
+            // be generous rather than assuming the popup appears immediately after the click.
+            await Task.Delay(3000);
         }
         finally
         {
             session.Context.Page -= OnPopup;
         }
 
-        if (popup is not null)
+        if (popup is null)
         {
-            var closed = new TaskCompletionSource();
-            void OnClose(object? sender, IPage page) => closed.TrySetResult();
-            popup.Close += OnClose;
-
-            try
-            {
-                if (!popup.IsClosed)
-                {
-                    await Task.WhenAny(closed.Task, Task.Delay(20000));
-                }
-            }
-            finally
-            {
-                popup.Close -= OnClose;
-            }
+            return;
         }
+
+        session.Popup = popup;
+        popup.Close += (_, _) =>
+        {
+            if (ReferenceEquals(session.Popup, popup))
+            {
+                session.Popup = null;
+            }
+        };
+
+        try
+        {
+            await popup.WaitForLoadStateAsync(LoadState.Load, new PageWaitForLoadStateOptions { Timeout = 5000 });
+        }
+        catch (TimeoutException)
+        {
+            // The popup may still be blank/loading - it'll show up as-is in the screenshot.
+        }
+    }
+
+    /// <summary>
+    /// Popups aren't guaranteed to open at the fixed 1280x800 the main page uses - sites often
+    /// size them explicitly (e.g. a small PayPal dialog). Click/fill coordinates are sent as
+    /// ratios from the frontend specifically so they can be scaled against whichever page -
+    /// main or popup - is actually active right now.
+    /// </summary>
+    private static (int Width, int Height) GetActiveViewportSize(LiveSession session)
+    {
+        var viewport = session.ActivePage.ViewportSize;
+        return viewport is not null ? (viewport.Width, viewport.Height) : (session.ViewportWidth, session.ViewportHeight);
     }
 
     /// <summary>
@@ -469,7 +524,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
                 return;
             }
 
-            await Task.Delay(500);
+            await Task.Delay(1500);
         }
     }
 
@@ -485,17 +540,18 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var order = session.Steps.Count + 1;
         var htmlFilePath = Path.Combine(session.StorageFolder, $"page-{order}.html");
         var screenshotFilePath = Path.Combine(session.StorageFolder, $"screenshot-{order}.png");
+        var activePage = session.ActivePage;
 
-        var html = await WithNavigationRetryAsync(() => session.Page.ContentAsync());
+        var html = await WithNavigationRetryAsync(() => activePage.ContentAsync());
         await File.WriteAllTextAsync(htmlFilePath, html, cancellationToken);
         await WithNavigationRetryAsync(async () =>
         {
-            await session.Page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotFilePath });
+            await activePage.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotFilePath });
             return true;
         });
 
         var step = new RecordedStep(
-            order, actionType, selector, value, elementDescription, session.Page.Url, htmlFilePath, screenshotFilePath,
+            order, actionType, selector, value, elementDescription, activePage.Url, htmlFilePath, screenshotFilePath,
             targetProbe?.X, targetProbe?.Y, targetProbe?.Width, targetProbe?.Height);
         session.Steps.Add(step);
         return step;

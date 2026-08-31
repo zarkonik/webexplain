@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import type { MouseEvent, WheelEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import {
   clickLiveCapture,
   fillLiveCapture,
@@ -39,6 +39,8 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
   const [fillValue, setFillValue] = useState('');
   const [screenshotVersion, setScreenshotVersion] = useState(0);
   const isScrollingRef = useRef(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const handleWheelRef = useRef<(event: globalThis.WheelEvent) => void>(() => {});
 
   async function handleStart() {
     if (!url.trim()) return;
@@ -136,23 +138,38 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
     }
   }
 
-  async function handleWheel(event: WheelEvent<HTMLDivElement>) {
+  // React attaches wheel listeners as passive by default, so calling preventDefault() from
+  // an onWheel prop silently does nothing (and logs a console warning on every tick) - the
+  // page would still scroll natively underneath the screenshot. A manually-registered native
+  // listener with { passive: false } is the only way to actually take over wheel events.
+  handleWheelRef.current = (event: globalThis.WheelEvent) => {
     event.preventDefault();
     if (!sessionId || isScrollingRef.current || pendingFill) return;
 
     isScrollingRef.current = true;
-    try {
-      const order = await scrollLiveCapture(sessionId, event.deltaY);
-      if (order > 0) {
-        setCurrentOrder(order);
-        setScreenshotVersion((v) => v + 1);
-      }
-    } catch {
-      // A missed scroll tick isn't worth surfacing - the user can just keep scrolling.
-    } finally {
-      isScrollingRef.current = false;
-    }
-  }
+    scrollLiveCapture(sessionId, event.deltaY)
+      .then((order) => {
+        if (order > 0) {
+          setCurrentOrder(order);
+          setScreenshotVersion((v) => v + 1);
+        }
+      })
+      .catch(() => {
+        // A missed scroll tick isn't worth surfacing - the user can just keep scrolling.
+      })
+      .finally(() => {
+        isScrollingRef.current = false;
+      });
+  };
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const listener = (event: globalThis.WheelEvent) => handleWheelRef.current(event);
+    stage.addEventListener('wheel', listener, { passive: false });
+    return () => stage.removeEventListener('wheel', listener);
+  }, [phase]);
 
   async function handleFinish() {
     if (!sessionId) return;
@@ -212,7 +229,7 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
           Click anywhere on the page below to record that step. When you're done, click "Finish".
         </p>
         <BrowserFrame url={currentUrl}>
-          <div className="live-capture-recorder__stage" onWheel={handleWheel}>
+          <div className="live-capture-recorder__stage" ref={stageRef}>
             <img
               className="live-capture-recorder__screenshot"
               src={getLiveScreenshotUrl(sessionId, currentOrder, screenshotVersion)}

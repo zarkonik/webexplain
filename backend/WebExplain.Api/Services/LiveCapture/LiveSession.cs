@@ -52,6 +52,16 @@ public class LiveSession(
     public bool IsFinished { get; set; }
 
     /// <summary>
+    /// A popup window opened by a click (e.g. a "Pay with PayPal" or OAuth-style dialog).
+    /// While one is open, it becomes the target for every subsequent click/fill/inspect/
+    /// screenshot - it's cleared automatically once the popup closes, at which point
+    /// <see cref="ActivePage"/> reverts to the main page on its own.
+    /// </summary>
+    public IPage? Popup { get; set; }
+
+    public IPage ActivePage => Popup is { IsClosed: false } ? Popup : Page;
+
+    /// <summary>
     /// Real (unmasked) values typed into sensitive fields, held only long enough to redact
     /// them from the recorded HAR file once the session ends. Never persisted or returned
     /// to the client - cleared immediately after redaction.
