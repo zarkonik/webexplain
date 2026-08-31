@@ -16,7 +16,13 @@ public class PlaywrightCaptureEngine : IBrowserCaptureEngine
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
-            Headless = true
+            Headless = true,
+            Args =
+            [
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding"
+            ]
         });
 
         await using var context = await browser.NewContextAsync(new BrowserNewContextOptions

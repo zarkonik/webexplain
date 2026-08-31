@@ -6,8 +6,9 @@ import type {
   StartLiveCaptureResponse,
 } from '../types/liveCapture';
 
-export function getLiveScreenshotUrl(sessionId: string, order: number): string {
-  return `${API_BASE_URL}/api/live-capture/${sessionId}/screenshot/${order}`;
+export function getLiveScreenshotUrl(sessionId: string, order: number, version?: number): string {
+  const base = `${API_BASE_URL}/api/live-capture/${sessionId}/screenshot/${order}`;
+  return version ? `${base}?v=${version}` : base;
 }
 
 export async function startLiveCapture(url: string): Promise<StartLiveCaptureResponse> {
@@ -51,6 +52,11 @@ export async function fillLiveCapture(
     value,
   });
   return response.data;
+}
+
+export async function scrollLiveCapture(sessionId: string, deltaY: number): Promise<number> {
+  const response = await apiClient.post<{ order: number }>(`/api/live-capture/${sessionId}/scroll`, { deltaY });
+  return response.data.order;
 }
 
 export async function finishLiveCapture(sessionId: string): Promise<RecordedStepDto[]> {

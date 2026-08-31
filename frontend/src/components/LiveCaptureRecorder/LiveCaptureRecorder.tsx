@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import type { MouseEvent } from 'react';
+import { useRef, useState } from 'react';
+import type { MouseEvent, WheelEvent } from 'react';
 import {
   clickLiveCapture,
   fillLiveCapture,
   finishLiveCapture,
   getLiveScreenshotUrl,
   inspectLiveCapture,
+  scrollLiveCapture,
   startLiveCapture,
 } from '../../api/liveCaptureApi';
 import BrowserFrame from '../BrowserFrame/BrowserFrame';
@@ -36,6 +37,8 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
   const [savedGuide, setSavedGuide] = useState<GuideDto | null>(null);
   const [pendingFill, setPendingFill] = useState<PendingFill | null>(null);
   const [fillValue, setFillValue] = useState('');
+  const [screenshotVersion, setScreenshotVersion] = useState(0);
+  const isScrollingRef = useRef(false);
 
   async function handleStart() {
     if (!url.trim()) return;
@@ -129,6 +132,24 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
     }
   }
 
+  async function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    if (!sessionId || isScrollingRef.current || pendingFill) return;
+
+    isScrollingRef.current = true;
+    try {
+      const order = await scrollLiveCapture(sessionId, event.deltaY);
+      if (order > 0) {
+        setCurrentOrder(order);
+        setScreenshotVersion((v) => v + 1);
+      }
+    } catch {
+      // A missed scroll tick isn't worth surfacing - the user can just keep scrolling.
+    } finally {
+      isScrollingRef.current = false;
+    }
+  }
+
   async function handleFinish() {
     if (!sessionId) return;
 
@@ -187,10 +208,10 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
           Click anywhere on the page below to record that step. When you're done, click "Finish".
         </p>
         <BrowserFrame url={currentUrl}>
-          <div className="live-capture-recorder__stage">
+          <div className="live-capture-recorder__stage" onWheel={handleWheel}>
             <img
               className="live-capture-recorder__screenshot"
-              src={getLiveScreenshotUrl(sessionId, currentOrder)}
+              src={getLiveScreenshotUrl(sessionId, currentOrder, screenshotVersion)}
               alt="Live page preview"
               onClick={handleImageClick}
             />

@@ -13,6 +13,20 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
 
     private const string MaskedValue = "••••••••";
 
+    /// <summary>
+    /// Chromium throttles timers, requestAnimationFrame and rendering on pages it treats as
+    /// backgrounded/unfocused - which a headless, input-idle automation session always looks
+    /// like unless something is actively clicking. That stalls JS-driven loading spinners and
+    /// can make async work (that a spinner's own tick loop happens to drive) appear stuck.
+    /// These flags disable that backgrounding behavior.
+    /// </summary>
+    private static readonly string[] ChromiumThrottlingWorkaroundArgs =
+    [
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding"
+    ];
+
     private const string ProbeScript = """
         ([x, y]) => {
             const el = document.elementFromPoint(x, y);
@@ -81,7 +95,11 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         Directory.CreateDirectory(storageFolder);
 
         var playwright = await Playwright.CreateAsync();
-        var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        {
+            Headless = true,
+            Args = ChromiumThrottlingWorkaroundArgs
+        });
 
         const int viewportWidth = 1280;
         const int viewportHeight = 800;
@@ -123,7 +141,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
 
         var probe = await session.Page.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
 
-        await session.Page.Mouse.ClickAsync((float)x, (float)y);
+        await ClickAndAwaitAnyPopupAsync(session, x, y);
         await SettlePageAsync(session.Page);
 
         var description = BuildElementDescription("click", probe, null);
@@ -161,6 +179,34 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var description = BuildElementDescription("fill", probe, recordedValue);
         var step = await CaptureStepAsync(session, "fill", probe.Selector, recordedValue, description, cancellationToken);
         return new LiveCaptureStepResponse(step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url);
+    }
+
+    public async Task<int> ScrollAsync(Guid sessionId, double deltaY, CancellationToken cancellationToken = default)
+    {
+        var session = GetActiveSession(sessionId);
+        session.LastActivity = DateTime.UtcNow;
+
+        await session.Page.Mouse.WheelAsync(0, (float)deltaY);
+        await SettlePageAsync(session.Page);
+
+        // Scrolling isn't a recordable action on its own - it just changes what the
+        // current step looks like, so the latest step's screenshot/HTML are refreshed
+        // in place rather than appending a new step.
+        var latestStep = session.Steps.LastOrDefault();
+        if (latestStep is null)
+        {
+            return 0;
+        }
+
+        var html = await WithNavigationRetryAsync(() => session.Page.ContentAsync());
+        await File.WriteAllTextAsync(latestStep.HtmlFilePath, html, cancellationToken);
+        await WithNavigationRetryAsync(async () =>
+        {
+            await session.Page.ScreenshotAsync(new PageScreenshotOptions { Path = latestStep.ScreenshotFilePath });
+            return true;
+        });
+
+        return latestStep.Order;
     }
 
     public string? GetScreenshotPath(Guid sessionId, int order)
@@ -332,31 +378,83 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     }
 
     /// <summary>
-    /// Waits for network idle, then briefly again after a short pause - client-side apps
-    /// often fire a second (data-fetching) round of requests just after the page first
-    /// settles, and a single network-idle wait can capture the screenshot before that data
-    /// has arrived.
+    /// Some flows (payment/OAuth-style "test mode" dialogs in particular) open a popup window
+    /// and have the main page wait for that popup to finish before its own "in progress" state
+    /// clears - a wait that never ends if nothing is watching the popup at all. This performs
+    /// the click, and if a popup appears, gives it a chance to run its course and close on its
+    /// own before the caller settles the main page. A popup that instead needs its own manual
+    /// interaction (e.g. a real login form) isn't handled here - it will simply time out.
     /// </summary>
-    private static async Task SettlePageAsync(IPage page)
+    private static async Task ClickAndAwaitAnyPopupAsync(LiveSession session, double x, double y)
     {
+        IPage? popup = null;
+        void OnPopup(object? sender, IPage page) => popup = page;
+
+        session.Context.Page += OnPopup;
         try
         {
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new PageWaitForLoadStateOptions { Timeout = 3000 });
+            await session.Page.Mouse.ClickAsync((float)x, (float)y);
+            await Task.Delay(300); // give a popup, if one is coming, time to actually open
         }
-        catch (TimeoutException)
+        finally
         {
-            // Not every action triggers navigation or network activity - that's fine.
+            session.Context.Page -= OnPopup;
         }
 
-        await Task.Delay(400);
+        if (popup is not null)
+        {
+            var closed = new TaskCompletionSource();
+            void OnClose(object? sender, IPage page) => closed.TrySetResult();
+            popup.Close += OnClose;
 
-        try
-        {
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new PageWaitForLoadStateOptions { Timeout = 2000 });
+            try
+            {
+                if (!popup.IsClosed)
+                {
+                    await Task.WhenAny(closed.Task, Task.Delay(20000));
+                }
+            }
+            finally
+            {
+                popup.Close -= OnClose;
+            }
         }
-        catch (TimeoutException)
+    }
+
+    /// <summary>
+    /// Waits for network idle, re-checking up to <paramref name="maxAttempts"/> times before
+    /// giving up - client-side apps often fire several rounds of sequential requests (e.g. a
+    /// multi-step payment flow) and a single network-idle wait can capture the screenshot
+    /// mid-transaction. Stops early once idle is reached twice in a row, so a simple click on
+    /// an already-settled page doesn't pay the full retry budget.
+    /// </summary>
+    private static async Task SettlePageAsync(IPage page, int maxAttempts = 5)
+    {
+        var consecutiveIdles = 0;
+
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
-            // Nothing further loaded in the grace period - proceed with what's on screen.
+            // Keeps the page's Page Visibility API state as "visible" so JS-driven spinners
+            // and polling loops that check document.visibilityState don't stall on their own.
+            await page.BringToFrontAsync();
+
+            try
+            {
+                await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new PageWaitForLoadStateOptions { Timeout = 3000 });
+                consecutiveIdles++;
+            }
+            catch (TimeoutException)
+            {
+                // Still busy (e.g. a transaction in progress) - keep retrying.
+                consecutiveIdles = 0;
+            }
+
+            if (consecutiveIdles >= 2)
+            {
+                return;
+            }
+
+            await Task.Delay(500);
         }
     }
 

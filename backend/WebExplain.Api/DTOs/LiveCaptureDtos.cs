@@ -12,6 +12,10 @@ public record LiveCaptureInspectResponse(string? Selector, bool IsFillable);
 
 public record LiveCaptureFillRequest(double XRatio, double YRatio, string Value);
 
+public record LiveCaptureScrollRequest(double DeltaY);
+
+public record LiveCaptureScrollResponse(int Order);
+
 public record LiveCaptureStepResponse(int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url);
 
 public record RecordedStepDto(int Order, string ActionType, string? Selector, string? Value, string? ElementDescription, string Url);

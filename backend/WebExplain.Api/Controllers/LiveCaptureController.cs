@@ -67,7 +67,25 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
         if (path is null || !System.IO.File.Exists(path))
             return NotFound();
 
+        // The file behind the current step's order can be overwritten in place by a
+        // scroll action, so this response must never be cached by the browser.
+        Response.Headers.CacheControl = "no-store";
         return PhysicalFile(path, "image/png");
+    }
+
+    [HttpPost("{sessionId:guid}/scroll")]
+    public async Task<ActionResult<LiveCaptureScrollResponse>> Scroll(
+        Guid sessionId, LiveCaptureScrollRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var order = await manager.ScrollAsync(sessionId, request.DeltaY, cancellationToken);
+            return Ok(new LiveCaptureScrollResponse(order));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{sessionId:guid}/finish")]
