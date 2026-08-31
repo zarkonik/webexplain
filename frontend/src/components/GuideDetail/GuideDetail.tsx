@@ -1,4 +1,5 @@
 import { getScreenshotUrl } from '../../api/captureApi';
+import { getGuideWordExportUrl } from '../../api/guideApi';
 import BrowserFrame from '../BrowserFrame/BrowserFrame';
 import type { GuideDto } from '../../types/guide';
 import './GuideDetail.css';
@@ -26,9 +27,14 @@ function GuideDetail({ guide, onDelete }: GuideDetailProps) {
             {guide.sourceUrl}
           </a>
         </div>
-        <button type="button" className="guide-detail__delete" onClick={() => onDelete(guide.id)}>
-          Delete
-        </button>
+        <div className="guide-detail__actions">
+          <a className="guide-detail__export" href={getGuideWordExportUrl(guide.id)}>
+            Export to Word
+          </a>
+          <button type="button" className="guide-detail__delete" onClick={() => onDelete(guide.id)}>
+            Delete
+          </button>
+        </div>
       </div>
 
       {guide.description && <p className="guide-detail__description">{guide.description}</p>}

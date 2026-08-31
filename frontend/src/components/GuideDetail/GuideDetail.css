@@ -39,8 +39,28 @@
   text-decoration: underline;
 }
 
-.guide-detail__delete {
+.guide-detail__actions {
   flex-shrink: 0;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.guide-detail__export {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4f46e5;
+  background-color: #eef2ff;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.guide-detail__export:hover {
+  background-color: #e0e7ff;
+}
+
+.guide-detail__delete {
   padding: 0.4rem 0.8rem;
   font-size: 0.8rem;
   color: #991b1b;

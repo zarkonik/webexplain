@@ -18,6 +18,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IGuideService, GuideService>();
+builder.Services.AddScoped<IGuideExportService, GuideExportService>();
 
 builder.Services.AddScoped<ICaptureSessionRepository, CaptureSessionRepository>();
 builder.Services.AddScoped<ICaptureService, CaptureService>();

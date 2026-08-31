@@ -6,7 +6,7 @@ namespace WebExplain.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class GuidesController(IGuideService guideService) : ControllerBase
+public class GuidesController(IGuideService guideService, IGuideExportService guideExportService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<GuideDto>>> GetAll()
@@ -33,5 +33,27 @@ public class GuidesController(IGuideService guideService) : ControllerBase
     {
         var deleted = await guideService.DeleteGuideAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    [HttpGet("{id:guid}/export/word")]
+    public async Task<IActionResult> ExportToWord(Guid id, CancellationToken cancellationToken)
+    {
+        var bytes = await guideExportService.ExportToWordAsync(id, cancellationToken);
+        if (bytes is null)
+        {
+            return NotFound();
+        }
+
+        var guide = await guideService.GetGuideByIdAsync(id);
+        var fileName = $"{SanitizeFileName(guide?.Title ?? "guide")}.docx";
+
+        return File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(name.Select(c => invalid.Contains(c) ? '-' : c).ToArray());
+        return string.IsNullOrWhiteSpace(cleaned) ? "guide" : cleaned;
     }
 }
