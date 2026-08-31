@@ -58,6 +58,10 @@ function LiveCaptureRecorder({ onGuideSaved }: LiveCaptureRecorderProps) {
           value: null,
           elementDescription: 'Open the starting page.',
           url: result.url,
+          targetX: null,
+          targetY: null,
+          targetWidth: null,
+          targetHeight: null,
         },
       ]);
       setPhase('recording');

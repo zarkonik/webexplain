@@ -141,6 +141,19 @@
   color: #6b7280;
 }
 
+.guide-detail__screenshot-wrapper {
+  position: relative;
+  line-height: 0;
+}
+
+.guide-detail__highlight {
+  position: absolute;
+  border: 3px solid #ef4444;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+  pointer-events: none;
+}
+
 .guide-detail__step-screenshot {
   display: block;
   width: 100%;

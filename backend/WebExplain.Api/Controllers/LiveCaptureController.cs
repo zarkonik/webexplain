@@ -94,7 +94,9 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
         try
         {
             var steps = await manager.FinishAsync(sessionId, cancellationToken);
-            var dtos = steps.Select(s => new RecordedStepDto(s.Order, s.ActionType, s.Selector, s.Value, s.ElementDescription, s.Url)).ToList();
+            var dtos = steps.Select(s => new RecordedStepDto(
+                s.Order, s.ActionType, s.Selector, s.Value, s.ElementDescription, s.Url,
+                s.TargetX, s.TargetY, s.TargetWidth, s.TargetHeight)).ToList();
             return Ok(dtos);
         }
         catch (InvalidOperationException ex)

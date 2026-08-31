@@ -36,7 +36,11 @@ public class GuideService(IGuideRepository repository) : IGuideService
                 ActionType = s.ActionType,
                 InputValue = s.InputValue,
                 PageUrl = s.PageUrl,
-                ElementDescription = s.ElementDescription
+                ElementDescription = s.ElementDescription,
+                TargetX = s.TargetX,
+                TargetY = s.TargetY,
+                TargetWidth = s.TargetWidth,
+                TargetHeight = s.TargetHeight
             }).ToList()
         };
 
@@ -54,7 +58,8 @@ public class GuideService(IGuideRepository repository) : IGuideService
         guide.SourceCaptureSessionId,
         guide.CreatedAt,
         guide.Steps.Select(s => new GuideStepDto(
-            s.Id, s.Order, s.TargetSelector, s.Instruction, s.ActionType, s.InputValue, s.PageUrl, s.ElementDescription
+            s.Id, s.Order, s.TargetSelector, s.Instruction, s.ActionType, s.InputValue, s.PageUrl, s.ElementDescription,
+            s.TargetX, s.TargetY, s.TargetWidth, s.TargetHeight
         )).ToList()
     );
 }

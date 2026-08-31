@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using SkiaSharp;
 using WebExplain.Api.Repositories;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
@@ -69,6 +70,11 @@ public class GuideExportService(
                 if (screenshotPaths.TryGetValue(step.Order - 1, out var screenshotPath) && File.Exists(screenshotPath))
                 {
                     var imageBytes = await File.ReadAllBytesAsync(screenshotPath, cancellationToken);
+                    if (step.TargetWidth is > 0 && step.TargetHeight is > 0)
+                    {
+                        imageBytes = DrawHighlightBox(
+                            imageBytes, step.TargetX ?? 0, step.TargetY ?? 0, step.TargetWidth.Value, step.TargetHeight.Value);
+                    }
                     body.AppendChild(CreateImageParagraph(mainPart, imageBytes, $"step-{step.Order}"));
                 }
 
@@ -214,6 +220,41 @@ public class GuideExportService(
             new Justification { Val = JustificationValues.Center },
             new SpacingBetweenLines { After = "200" });
         return new Paragraph(paragraphProperties, new Run(drawing));
+    }
+
+    /// <summary>
+    /// Draws a red highlight rectangle over the element this step acted on, so a reader of
+    /// the exported document can see exactly where to click/type without relying on prose
+    /// alone. The web viewer draws the same box as a CSS overlay instead, since it can be
+    /// positioned live over the image - but a static Word document needs it baked into the
+    /// picture itself.
+    /// </summary>
+    private static byte[] DrawHighlightBox(byte[] pngBytes, double x, double y, double width, double height)
+    {
+        using var original = SKBitmap.Decode(pngBytes);
+        if (original is null)
+        {
+            return pngBytes;
+        }
+
+        using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
+        var canvas = surface.Canvas;
+        canvas.DrawBitmap(original, 0, 0, new SKSamplingOptions(), null);
+
+        using var paint = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = new SKColor(239, 68, 68), // #EF4444
+            StrokeWidth = 4,
+            IsAntialias = true
+        };
+
+        var rect = SKRect.Create((float)x - 3, (float)y - 3, (float)width + 6, (float)height + 6);
+        canvas.DrawRoundRect(rect, 5, 5, paint);
+
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     private static (int Width, int Height) ReadPngDimensions(byte[] pngBytes)

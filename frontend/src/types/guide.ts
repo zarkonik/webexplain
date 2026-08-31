@@ -6,6 +6,10 @@ export interface CreateGuideStepRequest {
   inputValue?: string | null;
   pageUrl?: string | null;
   elementDescription?: string | null;
+  targetX?: number | null;
+  targetY?: number | null;
+  targetWidth?: number | null;
+  targetHeight?: number | null;
 }
 
 export interface CreateGuideRequest {
@@ -25,6 +29,10 @@ export interface GuideStepDto {
   inputValue: string | null;
   pageUrl: string | null;
   elementDescription: string | null;
+  targetX: number | null;
+  targetY: number | null;
+  targetWidth: number | null;
+  targetHeight: number | null;
 }
 
 export interface GuideDto {

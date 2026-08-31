@@ -10,7 +10,11 @@ public record RecordedStep(
     string? ElementDescription,
     string Url,
     string HtmlFilePath,
-    string ScreenshotFilePath);
+    string ScreenshotFilePath,
+    double? TargetX = null,
+    double? TargetY = null,
+    double? TargetWidth = null,
+    double? TargetHeight = null);
 
 public class ElementProbe
 {
@@ -19,6 +23,10 @@ public class ElementProbe
     public bool IsSensitive { get; set; }
     public string? Tag { get; set; }
     public string? Label { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
 }
 
 public class LiveSession(

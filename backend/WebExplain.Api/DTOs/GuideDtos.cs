@@ -8,7 +8,11 @@ public record GuideStepDto(
     string ActionType,
     string? InputValue,
     string? PageUrl,
-    string? ElementDescription
+    string? ElementDescription,
+    double? TargetX,
+    double? TargetY,
+    double? TargetWidth,
+    double? TargetHeight
 );
 
 public record GuideDto(
@@ -28,7 +32,11 @@ public record CreateGuideStepRequest(
     string ActionType,
     string? InputValue,
     string? PageUrl,
-    string? ElementDescription
+    string? ElementDescription,
+    double? TargetX = null,
+    double? TargetY = null,
+    double? TargetWidth = null,
+    double? TargetHeight = null
 );
 
 public record CreateGuideRequest(

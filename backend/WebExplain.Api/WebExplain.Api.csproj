@@ -15,6 +15,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Playwright" Version="1.*" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.*" />
+    <PackageReference Include="SkiaSharp" Version="4.151.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.151.1" />
   </ItemGroup>
 
 </Project>

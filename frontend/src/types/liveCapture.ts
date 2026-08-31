@@ -18,6 +18,10 @@ export interface LiveCaptureStepResponse {
   value: string | null;
   elementDescription: string | null;
   url: string;
+  targetX: number | null;
+  targetY: number | null;
+  targetWidth: number | null;
+  targetHeight: number | null;
 }
 
 export interface RecordedStepDto {
@@ -27,4 +31,8 @@ export interface RecordedStepDto {
   value: string | null;
   elementDescription: string | null;
   url: string;
+  targetX: number | null;
+  targetY: number | null;
+  targetWidth: number | null;
+  targetHeight: number | null;
 }

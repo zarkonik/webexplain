@@ -13,4 +13,15 @@ public class GuideStep
     public string? InputValue { get; set; }
     public string? PageUrl { get; set; }
     public string? ElementDescription { get; set; }
+
+    /// <summary>
+    /// Viewport-relative bounding box (in the 1280x800 capture viewport's CSS pixels) of the
+    /// element this step acted on - used to draw a highlight over the *previous* step's
+    /// screenshot, since that's the "before" state where the action was actually performed.
+    /// Null for steps with no associated element (e.g. the initial "navigate" step).
+    /// </summary>
+    public double? TargetX { get; set; }
+    public double? TargetY { get; set; }
+    public double? TargetWidth { get; set; }
+    public double? TargetHeight { get; set; }
 }

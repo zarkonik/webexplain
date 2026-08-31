@@ -46,6 +46,10 @@ function GuideStepAnnotator({ sessionId, sourceUrl, steps, onSaved, onCancel }: 
           inputValue: step.value,
           pageUrl: step.url,
           elementDescription: step.elementDescription,
+          targetX: step.targetX,
+          targetY: step.targetY,
+          targetWidth: step.targetWidth,
+          targetHeight: step.targetHeight,
         })),
       });
       onSaved(guide);

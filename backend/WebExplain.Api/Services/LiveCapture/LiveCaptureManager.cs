@@ -30,7 +30,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     private const string ProbeScript = """
         ([x, y]) => {
             const el = document.elementFromPoint(x, y);
-            if (!el) return { selector: null, isFillable: false, isSensitive: false, tag: null, label: null };
+            if (!el) return { selector: null, isFillable: false, isSensitive: false, tag: null, label: null, x: 0, y: 0, width: 0, height: 0 };
 
             const tag = el.tagName.toLowerCase();
             const type = (el.getAttribute('type') || '').toLowerCase();
@@ -84,7 +84,18 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
                 return null;
             }
 
-            return { selector: selectorFor(el), isFillable, isSensitive, tag, label: labelFor(el) };
+            const rect = el.getBoundingClientRect();
+            return {
+                selector: selectorFor(el),
+                isFillable,
+                isSensitive,
+                tag,
+                label: labelFor(el),
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height
+            };
         }
         """;
 
@@ -145,8 +156,10 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         await SettlePageAsync(session.Page);
 
         var description = BuildElementDescription("click", probe, null);
-        var step = await CaptureStepAsync(session, "click", probe.Selector, null, description, cancellationToken);
-        return new LiveCaptureStepResponse(step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url);
+        var step = await CaptureStepAsync(session, "click", probe.Selector, null, description, cancellationToken, probe);
+        return new LiveCaptureStepResponse(
+            step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url,
+            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight);
     }
 
     public async Task<LiveCaptureStepResponse> FillAsync(
@@ -177,8 +190,10 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         var recordedValue = probe.IsSensitive ? MaskedValue : value;
 
         var description = BuildElementDescription("fill", probe, recordedValue);
-        var step = await CaptureStepAsync(session, "fill", probe.Selector, recordedValue, description, cancellationToken);
-        return new LiveCaptureStepResponse(step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url);
+        var step = await CaptureStepAsync(session, "fill", probe.Selector, recordedValue, description, cancellationToken, probe);
+        return new LiveCaptureStepResponse(
+            step.Order, step.ActionType, step.Selector, step.Value, step.ElementDescription, step.Url,
+            step.TargetX, step.TargetY, step.TargetWidth, step.TargetHeight);
     }
 
     public async Task<int> ScrollAsync(Guid sessionId, double deltaY, CancellationToken cancellationToken = default)
@@ -459,7 +474,13 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     }
 
     private static async Task<RecordedStep> CaptureStepAsync(
-        LiveSession session, string actionType, string? selector, string? value, string? elementDescription, CancellationToken cancellationToken)
+        LiveSession session,
+        string actionType,
+        string? selector,
+        string? value,
+        string? elementDescription,
+        CancellationToken cancellationToken,
+        ElementProbe? targetProbe = null)
     {
         var order = session.Steps.Count + 1;
         var htmlFilePath = Path.Combine(session.StorageFolder, $"page-{order}.html");
@@ -473,7 +494,9 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
             return true;
         });
 
-        var step = new RecordedStep(order, actionType, selector, value, elementDescription, session.Page.Url, htmlFilePath, screenshotFilePath);
+        var step = new RecordedStep(
+            order, actionType, selector, value, elementDescription, session.Page.Url, htmlFilePath, screenshotFilePath,
+            targetProbe?.X, targetProbe?.Y, targetProbe?.Width, targetProbe?.Height);
         session.Steps.Add(step);
         return step;
     }
