@@ -23,16 +23,24 @@
   margin-bottom: 0.75rem;
 }
 
+.guide-detail__header-text {
+  min-width: 0;
+}
+
 .guide-detail__title {
   margin: 0 0 0.2rem;
   font-size: 1.25rem;
   color: #111827;
+  overflow-wrap: break-word;
 }
 
 .guide-detail__url {
+  display: inline-block;
+  max-width: 100%;
   font-size: 0.85rem;
   color: #4f46e5;
   text-decoration: none;
+  overflow-wrap: break-word;
 }
 
 .guide-detail__url:hover {

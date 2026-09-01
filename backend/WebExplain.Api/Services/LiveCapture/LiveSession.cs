@@ -30,6 +30,7 @@ public class ElementProbe
 }
 
 public class LiveSession(
+    Guid userId,
     IPlaywright playwright,
     IBrowser browser,
     IBrowserContext context,
@@ -39,6 +40,7 @@ public class LiveSession(
     int viewportWidth,
     int viewportHeight)
 {
+    public Guid UserId { get; } = userId;
     public IPlaywright Playwright { get; } = playwright;
     public IBrowser Browser { get; } = browser;
     public IBrowserContext Context { get; } = context;

@@ -12,23 +12,24 @@ public class CaptureService(
 {
     private string StorageRoot => Path.Combine(environment.ContentRootPath, "Storage", "Captures");
 
-    public async Task<List<CaptureSessionDto>> GetAllSessionsAsync()
+    public async Task<List<CaptureSessionDto>> GetAllSessionsAsync(Guid userId)
     {
-        var sessions = await repository.GetAllAsync();
+        var sessions = await repository.GetAllAsync(userId);
         return sessions.Select(ToDto).ToList();
     }
 
-    public async Task<CaptureSessionDto?> GetSessionByIdAsync(Guid id)
+    public async Task<CaptureSessionDto?> GetSessionByIdAsync(Guid id, Guid userId)
     {
-        var session = await repository.GetByIdAsync(id);
+        var session = await repository.GetByIdAsync(id, userId);
         return session is null ? null : ToDto(session);
     }
 
-    public async Task<CaptureSessionDto> CaptureAsync(CreateCaptureRequest request, CancellationToken cancellationToken = default)
+    public async Task<CaptureSessionDto> CaptureAsync(CreateCaptureRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var session = new CaptureSession
         {
             Id = Guid.NewGuid(),
+            UserId = userId,
             SourceUrl = request.Url,
             Status = CaptureStatus.Running
         };

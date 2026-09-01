@@ -5,6 +5,7 @@ namespace WebExplain.Api.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
+    public DbSet<User> Users => Set<User>();
     public DbSet<Guide> Guides => Set<Guide>();
     public DbSet<GuideStep> GuideSteps => Set<GuideStep>();
     public DbSet<CaptureSession> CaptureSessions => Set<CaptureSession>();
@@ -12,9 +13,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(u => u.Id);
+            entity.HasIndex(u => u.Email).IsUnique();
+        });
+
         modelBuilder.Entity<Guide>(entity =>
         {
             entity.HasKey(g => g.Id);
+            entity.HasOne(g => g.User)
+                .WithMany()
+                .HasForeignKey(g => g.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(g => g.Steps)
                 .WithOne(s => s.Guide)
                 .HasForeignKey(s => s.GuideId)
@@ -31,6 +42,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Status).HasConversion<string>();
+            entity.HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(c => c.Pages)
                 .WithOne(p => p.CaptureSession)
                 .HasForeignKey(p => p.CaptureSessionId)

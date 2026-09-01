@@ -33,7 +33,7 @@ function GuideDetail({ guide, onDelete }: GuideDetailProps) {
   return (
     <div className="guide-detail">
       <div className="guide-detail__header">
-        <div>
+        <div className="guide-detail__header-text">
           <h2 className="guide-detail__title">{guide.title}</h2>
           <a className="guide-detail__url" href={guide.sourceUrl} target="_blank" rel="noreferrer">
             {guide.sourceUrl}

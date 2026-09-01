@@ -11,6 +11,8 @@ public enum CaptureStatus
 public class CaptureSession
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public User? User { get; set; }
     public string SourceUrl { get; set; } = string.Empty;
     public CaptureStatus Status { get; set; } = CaptureStatus.Pending;
     public string? ErrorMessage { get; set; }

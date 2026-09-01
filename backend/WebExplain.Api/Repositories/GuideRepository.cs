@@ -6,19 +6,20 @@ namespace WebExplain.Api.Repositories;
 
 public class GuideRepository(ApplicationDbContext context) : IGuideRepository
 {
-    public async Task<List<Guide>> GetAllAsync()
+    public async Task<List<Guide>> GetAllAsync(Guid userId)
     {
         return await context.Guides
+            .Where(g => g.UserId == userId)
             .Include(g => g.Steps.OrderBy(s => s.Order))
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync();
     }
 
-    public async Task<Guide?> GetByIdAsync(Guid id)
+    public async Task<Guide?> GetByIdAsync(Guid id, Guid userId)
     {
         return await context.Guides
             .Include(g => g.Steps.OrderBy(s => s.Order))
-            .FirstOrDefaultAsync(g => g.Id == id);
+            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
     }
 
     public async Task<Guide> AddAsync(Guide guide)
@@ -28,9 +29,9 @@ public class GuideRepository(ApplicationDbContext context) : IGuideRepository
         return guide;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, Guid userId)
     {
-        var guide = await context.Guides.FindAsync(id);
+        var guide = await context.Guides.FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
         if (guide is null) return false;
 
         context.Guides.Remove(guide);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using WebExplain.Api.DTOs;
+using WebExplain.Api.Extensions;
 using WebExplain.Api.Services.LiveCapture;
 
 namespace WebExplain.Api.Controllers;
@@ -11,7 +12,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     [HttpPost("start")]
     public async Task<ActionResult<StartLiveCaptureResponse>> Start(StartLiveCaptureRequest request, CancellationToken cancellationToken)
     {
-        var result = await manager.StartAsync(request.Url, cancellationToken);
+        var result = await manager.StartAsync(request.Url, User.GetUserId(), cancellationToken);
         return Ok(result);
     }
 
@@ -21,7 +22,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     {
         try
         {
-            var probe = await manager.InspectAsync(sessionId, request.XRatio, request.YRatio, cancellationToken);
+            var probe = await manager.InspectAsync(sessionId, User.GetUserId(), request.XRatio, request.YRatio, cancellationToken);
             return Ok(new LiveCaptureInspectResponse(probe.Selector, probe.IsFillable));
         }
         catch (InvalidOperationException ex)
@@ -36,7 +37,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     {
         try
         {
-            var result = await manager.ClickAsync(sessionId, request.XRatio, request.YRatio, cancellationToken);
+            var result = await manager.ClickAsync(sessionId, User.GetUserId(), request.XRatio, request.YRatio, cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -51,7 +52,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     {
         try
         {
-            var result = await manager.FillAsync(sessionId, request.XRatio, request.YRatio, request.Value, cancellationToken);
+            var result = await manager.FillAsync(sessionId, User.GetUserId(), request.XRatio, request.YRatio, request.Value, cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -63,7 +64,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     [HttpGet("{sessionId:guid}/screenshot/{order:int}")]
     public IActionResult GetScreenshot(Guid sessionId, int order)
     {
-        var path = manager.GetScreenshotPath(sessionId, order);
+        var path = manager.GetScreenshotPath(sessionId, User.GetUserId(), order);
         if (path is null || !System.IO.File.Exists(path))
             return NotFound();
 
@@ -79,7 +80,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     {
         try
         {
-            var order = await manager.ScrollAsync(sessionId, request.DeltaY, cancellationToken);
+            var order = await manager.ScrollAsync(sessionId, User.GetUserId(), request.DeltaY, cancellationToken);
             return Ok(new LiveCaptureScrollResponse(order));
         }
         catch (InvalidOperationException ex)
@@ -93,7 +94,7 @@ public class LiveCaptureController(ILiveCaptureManager manager) : ControllerBase
     {
         try
         {
-            var steps = await manager.FinishAsync(sessionId, cancellationToken);
+            var steps = await manager.FinishAsync(sessionId, User.GetUserId(), cancellationToken);
             var dtos = steps.Select(s => new RecordedStepDto(
                 s.Order, s.ActionType, s.Selector, s.Value, s.ElementDescription, s.Url,
                 s.TargetX, s.TargetY, s.TargetWidth, s.TargetHeight)).ToList();

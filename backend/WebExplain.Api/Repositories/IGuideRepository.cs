@@ -4,9 +4,9 @@ namespace WebExplain.Api.Repositories;
 
 public interface IGuideRepository
 {
-    Task<List<Guide>> GetAllAsync();
-    Task<Guide?> GetByIdAsync(Guid id);
+    Task<List<Guide>> GetAllAsync(Guid userId);
+    Task<Guide?> GetByIdAsync(Guid id, Guid userId);
     Task<Guide> AddAsync(Guide guide);
-    Task<bool> DeleteAsync(Guid id);
+    Task<bool> DeleteAsync(Guid id, Guid userId);
     Task SaveChangesAsync();
 }

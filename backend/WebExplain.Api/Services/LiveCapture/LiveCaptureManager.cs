@@ -119,7 +119,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         }
         """;
 
-    public async Task<StartLiveCaptureResponse> StartAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<StartLiveCaptureResponse> StartAsync(string url, Guid userId, CancellationToken cancellationToken = default)
     {
         var sessionId = Guid.NewGuid();
         var storageFolder = Path.Combine(environment.ContentRootPath, "Storage", "Captures", sessionId.ToString());
@@ -153,16 +153,16 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await SettlePageAsync(page);
 
-        var session = new LiveSession(playwright, browser, context, page, url, storageFolder, viewportWidth, viewportHeight);
+        var session = new LiveSession(userId, playwright, browser, context, page, url, storageFolder, viewportWidth, viewportHeight);
         var initialStep = await CaptureStepAsync(session, "navigate", null, null, "Open the starting page.", cancellationToken);
         _sessions[sessionId] = session;
 
         return new StartLiveCaptureResponse(sessionId, initialStep.Order, initialStep.Url, viewportWidth, viewportHeight);
     }
 
-    public async Task<ElementProbe> InspectAsync(Guid sessionId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
+    public async Task<ElementProbe> InspectAsync(Guid sessionId, Guid userId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
     {
-        var session = GetActiveSession(sessionId);
+        var session = GetActiveSession(sessionId, userId);
         var (viewportWidth, viewportHeight) = GetActiveViewportSize(session);
         var x = xRatio * viewportWidth;
         var y = yRatio * viewportHeight;
@@ -170,9 +170,9 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         return await session.ActivePage.EvaluateAsync<ElementProbe>(ProbeScript, new[] { x, y });
     }
 
-    public async Task<LiveCaptureStepResponse> ClickAsync(Guid sessionId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
+    public async Task<LiveCaptureStepResponse> ClickAsync(Guid sessionId, Guid userId, double xRatio, double yRatio, CancellationToken cancellationToken = default)
     {
-        var session = GetActiveSession(sessionId);
+        var session = GetActiveSession(sessionId, userId);
         session.LastActivity = DateTime.UtcNow;
 
         var activePage = session.ActivePage;
@@ -194,9 +194,9 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
     }
 
     public async Task<LiveCaptureStepResponse> FillAsync(
-        Guid sessionId, double xRatio, double yRatio, string value, CancellationToken cancellationToken = default)
+        Guid sessionId, Guid userId, double xRatio, double yRatio, string value, CancellationToken cancellationToken = default)
     {
-        var session = GetActiveSession(sessionId);
+        var session = GetActiveSession(sessionId, userId);
         session.LastActivity = DateTime.UtcNow;
 
         var activePage = session.ActivePage;
@@ -230,9 +230,9 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
             IsPopup: session.Popup is { IsClosed: false });
     }
 
-    public async Task<int> ScrollAsync(Guid sessionId, double deltaY, CancellationToken cancellationToken = default)
+    public async Task<int> ScrollAsync(Guid sessionId, Guid userId, double deltaY, CancellationToken cancellationToken = default)
     {
-        var session = GetActiveSession(sessionId);
+        var session = GetActiveSession(sessionId, userId);
         session.LastActivity = DateTime.UtcNow;
 
         var activePage = session.ActivePage;
@@ -259,21 +259,30 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         return latestStep.Order;
     }
 
-    public string? GetScreenshotPath(Guid sessionId, int order)
+    public string? GetScreenshotPath(Guid sessionId, Guid userId, int order)
     {
-        return _sessions.TryGetValue(sessionId, out var session)
+        return _sessions.TryGetValue(sessionId, out var session) && session.UserId == userId
             ? session.Steps.FirstOrDefault(s => s.Order == order)?.ScreenshotFilePath
             : null;
     }
 
-    public List<RecordedStep>? GetSteps(Guid sessionId)
+    public List<RecordedStep>? GetSteps(Guid sessionId, Guid userId)
     {
-        return _sessions.TryGetValue(sessionId, out var session) ? session.Steps : null;
+        return _sessions.TryGetValue(sessionId, out var session) && session.UserId == userId ? session.Steps : null;
     }
 
-    public async Task<List<RecordedStep>> FinishAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    public async Task<List<RecordedStep>> FinishAsync(Guid sessionId, Guid userId, CancellationToken cancellationToken = default)
     {
-        var session = GetActiveSession(sessionId);
+        GetActiveSession(sessionId, userId); // validates ownership before the internal finish runs
+        return await FinishInternalAsync(sessionId, cancellationToken);
+    }
+
+    private async Task<List<RecordedStep>> FinishInternalAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        if (!_sessions.TryGetValue(sessionId, out var session) || session.IsFinished)
+        {
+            throw new InvalidOperationException("Live capture session not found or already finished.");
+        }
 
         await session.Context.CloseAsync();
         await session.Browser.CloseAsync();
@@ -336,6 +345,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         await repository.AddAsync(new CaptureSession
         {
             Id = sessionId,
+            UserId = session.UserId,
             SourceUrl = session.StartUrl,
             Status = CaptureStatus.Completed,
             StorageFolder = session.StorageFolder,
@@ -368,7 +378,7 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         {
             try
             {
-                await FinishAsync(id);
+                await FinishInternalAsync(id);
             }
             catch
             {
@@ -388,9 +398,11 @@ public class LiveCaptureManager(IWebHostEnvironment environment, IServiceScopeFa
         }
     }
 
-    private LiveSession GetActiveSession(Guid sessionId)
+    private LiveSession GetActiveSession(Guid sessionId, Guid userId)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        // Deliberately the same error for "doesn't exist" and "belongs to someone else" -
+        // a session ID shouldn't leak whether another user's session exists at all.
+        if (!_sessions.TryGetValue(sessionId, out var session) || session.UserId != userId)
             throw new InvalidOperationException("Live capture session not found or expired.");
 
         if (session.IsFinished)

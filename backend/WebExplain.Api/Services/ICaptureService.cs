@@ -4,7 +4,7 @@ namespace WebExplain.Api.Services;
 
 public interface ICaptureService
 {
-    Task<List<CaptureSessionDto>> GetAllSessionsAsync();
-    Task<CaptureSessionDto?> GetSessionByIdAsync(Guid id);
-    Task<CaptureSessionDto> CaptureAsync(CreateCaptureRequest request, CancellationToken cancellationToken = default);
+    Task<List<CaptureSessionDto>> GetAllSessionsAsync(Guid userId);
+    Task<CaptureSessionDto?> GetSessionByIdAsync(Guid id, Guid userId);
+    Task<CaptureSessionDto> CaptureAsync(CreateCaptureRequest request, Guid userId, CancellationToken cancellationToken = default);
 }

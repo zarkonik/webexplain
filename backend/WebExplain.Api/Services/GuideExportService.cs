@@ -16,9 +16,9 @@ public class GuideExportService(
     private const long EmuPerInch = 914400;
     private const double MaxImageWidthInches = 6.2;
 
-    public async Task<byte[]?> ExportToWordAsync(Guid guideId, CancellationToken cancellationToken = default)
+    public async Task<byte[]?> ExportToWordAsync(Guid guideId, Guid userId, CancellationToken cancellationToken = default)
     {
-        var guide = await guideRepository.GetByIdAsync(guideId);
+        var guide = await guideRepository.GetByIdAsync(guideId, userId);
         if (guide is null)
         {
             return null;
@@ -27,7 +27,7 @@ public class GuideExportService(
         var screenshotPaths = new Dictionary<int, string>();
         if (guide.SourceCaptureSessionId is { } sessionId)
         {
-            var session = await captureSessionRepository.GetByIdAsync(sessionId);
+            var session = await captureSessionRepository.GetByIdAsync(sessionId, userId);
             if (session is not null)
             {
                 foreach (var page in session.Pages)

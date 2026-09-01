@@ -6,23 +6,24 @@ namespace WebExplain.Api.Services;
 
 public class GuideService(IGuideRepository repository) : IGuideService
 {
-    public async Task<List<GuideDto>> GetAllGuidesAsync()
+    public async Task<List<GuideDto>> GetAllGuidesAsync(Guid userId)
     {
-        var guides = await repository.GetAllAsync();
+        var guides = await repository.GetAllAsync(userId);
         return guides.Select(ToDto).ToList();
     }
 
-    public async Task<GuideDto?> GetGuideByIdAsync(Guid id)
+    public async Task<GuideDto?> GetGuideByIdAsync(Guid id, Guid userId)
     {
-        var guide = await repository.GetByIdAsync(id);
+        var guide = await repository.GetByIdAsync(id, userId);
         return guide is null ? null : ToDto(guide);
     }
 
-    public async Task<GuideDto> CreateGuideAsync(CreateGuideRequest request)
+    public async Task<GuideDto> CreateGuideAsync(CreateGuideRequest request, Guid userId)
     {
         var guide = new Guide
         {
             Id = Guid.NewGuid(),
+            UserId = userId,
             Title = request.Title,
             Description = request.Description,
             SourceUrl = request.SourceUrl,
@@ -48,7 +49,7 @@ public class GuideService(IGuideRepository repository) : IGuideService
         return ToDto(created);
     }
 
-    public Task<bool> DeleteGuideAsync(Guid id) => repository.DeleteAsync(id);
+    public Task<bool> DeleteGuideAsync(Guid id, Guid userId) => repository.DeleteAsync(id, userId);
 
     private static GuideDto ToDto(Guide guide) => new(
         guide.Id,

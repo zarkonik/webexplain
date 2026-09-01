@@ -13,7 +13,11 @@ import './Home.css';
 
 type Mode = 'live' | 'manual' | 'guides';
 
-function Home() {
+interface HomeProps {
+  onLogout: () => void;
+}
+
+function Home({ onLogout }: HomeProps) {
   const [mode, setMode] = useState<Mode>('live');
   const [sessions, setSessions] = useState<CaptureSessionDto[]>([]);
   const [selectedSession, setSelectedSession] = useState<CaptureSessionDto | null>(null);
@@ -66,8 +70,13 @@ function Home() {
   return (
     <div className="home">
       <header className="home__header">
-        <h1>WebExplain</h1>
-        <p>Browse a page live and turn what you click into a guide, or capture pages manually below.</p>
+        <div>
+          <h1>WebExplain</h1>
+          <p>Browse a page live and turn what you click into a guide, or capture pages manually below.</p>
+        </div>
+        <button type="button" className="home__logout" onClick={onLogout}>
+          Log out
+        </button>
       </header>
 
       <div className="home__mode-switch">

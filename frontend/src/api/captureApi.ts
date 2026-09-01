@@ -1,8 +1,8 @@
-import { apiClient, API_BASE_URL } from './client';
+import { apiClient, API_BASE_URL, withTokenParam } from './client';
 import type { CaptureSessionDto, CaptureStepInput } from '../types/capture';
 
 export function getScreenshotUrl(sessionId: string, order: number): string {
-  return `${API_BASE_URL}/api/capture/${sessionId}/screenshot/${order}`;
+  return withTokenParam(`${API_BASE_URL}/api/capture/${sessionId}/screenshot/${order}`);
 }
 
 export async function getCaptureSessions(): Promise<CaptureSessionDto[]> {

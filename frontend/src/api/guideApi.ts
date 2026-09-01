@@ -1,8 +1,8 @@
-import { apiClient, API_BASE_URL } from './client';
+import { apiClient, API_BASE_URL, withTokenParam } from './client';
 import type { CreateGuideRequest, GuideDto } from '../types/guide';
 
 export function getGuideWordExportUrl(id: string): string {
-  return `${API_BASE_URL}/api/guides/${id}/export/word`;
+  return withTokenParam(`${API_BASE_URL}/api/guides/${id}/export/word`);
 }
 
 export async function createGuide(request: CreateGuideRequest): Promise<GuideDto> {

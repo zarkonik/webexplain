@@ -1,4 +1,4 @@
-import { apiClient, API_BASE_URL } from './client';
+import { apiClient, API_BASE_URL, withTokenParam } from './client';
 import type {
   LiveCaptureInspectResponse,
   LiveCaptureStepResponse,
@@ -8,7 +8,7 @@ import type {
 
 export function getLiveScreenshotUrl(sessionId: string, order: number, version?: number): string {
   const base = `${API_BASE_URL}/api/live-capture/${sessionId}/screenshot/${order}`;
-  return version ? `${base}?v=${version}` : base;
+  return withTokenParam(version ? `${base}?v=${version}` : base);
 }
 
 export async function startLiveCapture(url: string): Promise<StartLiveCaptureResponse> {
