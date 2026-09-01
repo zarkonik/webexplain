@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: webexplain-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: webexplain
+      POSTGRES_USER: webexplain
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - webexplain_postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend/WebExplain.Api
+    container_name: webexplain-backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=webexplain;Username=webexplain;Password=${POSTGRES_PASSWORD}"
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: WebExplain
+      Jwt__Audience: WebExplain
+      Jwt__ExpiryHours: "24"
+    volumes:
+      - webexplain_storage:/app/Storage
+    depends_on:
+      - postgres
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: webexplain-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  webexplain_postgres_data:
+  webexplain_storage:
+  caddy_data:
+  caddy_config:

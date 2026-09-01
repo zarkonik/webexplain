@@ -95,13 +95,27 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Applies any pending EF Core migrations on startup, since the production container has
+// no dotnet-ef tool available to run them as a separate step.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// In production, Caddy terminates HTTPS at the edge and forwards plain HTTP to this
+// container over the internal Docker network - redirecting here too would just be
+// redundant (and Kestrel doesn't see TLS, so it can't tell the request was already secure).
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Frontend");
 
