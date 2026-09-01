@@ -26,6 +26,14 @@ services:
       - webexplain_storage:/app/Storage
     depends_on:
       - postgres
+    networks:
+      default:
+      # "backend" is already taken as an alias on this shared network (by
+      # Radio2gether's own backend container), so this container needs a name of its
+      # own here to avoid two containers answering to the same DNS name.
+      talkforum_default:
+        aliases:
+          - webexplain-backend
 
   web:
     build:
@@ -34,17 +42,25 @@ services:
         VITE_API_BASE_URL: ""
     container_name: webexplain-web
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - backend
+    networks:
+      default:
+      # Same reasoning as above - "web" is already taken by TalkForum's own Caddy
+      # container on this shared network.
+      talkforum_default:
+        aliases:
+          - webexplain-web
 
 volumes:
   webexplain_postgres_data:
   webexplain_storage:
-  caddy_data:
-  caddy_config:
+
+networks:
+  default:
+  # The shared Caddy container (talkforum-web-1) that already owns ports 80/443 on the
+  # VPS lives on this network - joining it is how that Caddy can reach these two
+  # containers by name to reverse-proxy webexplain.tech, without this app publishing
+  # any ports of its own.
+  talkforum_default:
+    external: true
